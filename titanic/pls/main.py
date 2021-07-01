@@ -6,6 +6,8 @@ from sklearn.metrics import roc_curve, auc
 from sklearn.metrics import classification_report
 import matplotlib.pyplot as plt
 
+import sys
+sys.path.insert(0, "../..")
 
 
 class PLSclassifier:
@@ -66,7 +68,7 @@ class PLSclassifier:
         print(classification_report(y_true, y_pred, target_names=["Died", "Survived"]))
         fpr, tpr, _ = roc_curve(y_true, y_pred, pos_label=1, drop_intermediate=False)
         roc_auc = auc(fpr, tpr)
-        self.plot_roc_curve(fpr=fpr, tpr=tpr, auc=roc_auc)
+        self.plot_roc_curve(fpr=fpr, tpr=tpr, roc_auc=roc_auc)
 
     @staticmethod
     def plot_roc_curve(fpr, tpr, roc_auc):
