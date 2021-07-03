@@ -1,4 +1,4 @@
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
 from sklearn.metrics import roc_curve, plot_roc_curve, plot_precision_recall_curve, f1_score, accuracy_score
 from sklearn.impute import SimpleImputer
 import pandas as pd
@@ -21,6 +21,9 @@ def imputer(pd_series_missing_values, impute_strategy):
 
 def data_processing(df, drop_na=True):
     '''
+    note random forests do not require numeric data to be scaled or normalised as they use decision trees
+    any data mean scaling etc has no effect on the model performance.
+
     creates X and Y matrix from raw data
     drops columns with little information (PassengerId', 'Name', 'Cabin', 'Ticket')
     drops rows with missing values or imputes the missing values using either simple or multivariate methods
@@ -60,12 +63,12 @@ def data_processing(df, drop_na=True):
     binary_data = useful_columns[['Survived', 'Sex']]
     numerical_data = useful_columns[['Age', 'SibSp', 'Parch', 'Fare']]
 
-    # Preprocess binary data
+    # Preprocess binary data (needs to be in integer form)
     # binary_data['Sex'].replace({'female': 0, 'male': 1}, inplace=True)  # convert strings to int
-    sex_int = binary_data['Sex'].map({'male': 0, 'female': 1}) # convert strings to int
+    sex_int = binary_data['Sex'].map({'male': 0, 'female': 1})  # convert strings to int
 
     # Preprocess numeric data
-    # later on I should try mean centring the data...
+    # not necessary for a random forest
 
     # Preprocess the categorical data
     categorical_data_one_hot_encoded = pd.get_dummies(categorical_data, prefix=['class', 'embark'],
@@ -84,32 +87,36 @@ def test_merge(feature_file, answer_file):
     return df
 
 
-def train_random_forest(x_train, y_train):
-    """ Trains a Random Forest, returns train predictions and probabilities """
-    model = RandomForestClassifier()  # using default values for max depth...
+def train_RF_AdaBoost(x_train, y_train, classifier):
+    """ Trains a Random Forest or AdaBoost Classifier, returns train predictions and probabilities
+    classifier needs to be either sklearn objects RandomForestClassifier or AdaBoostClassifier"""
+    model = classifier()  # using default values
     model.fit(x_train, y_train)
     training_predictions = model.predict(x_train)  # returns vectors of 1s and 0s
     training_probabilities = model.predict_proba(x_train)  # returns floats of probablilities
     return model, training_predictions, training_probabilities
 
 
-def test_model(model, x_test, y_test):
-    """ computes test probabilities using a random forest """
-    print(f'Test metrics were carried out on {len(x_test)} datapoints')
+def test_model(model, x_data, y_data, make_plots, data_name):
+    """ computes probabilities on a given data set using a sklearn model (doesnt have to be random forest) """
+    print(f'Metrics were carried out on {len(x_data)} datapoints of the {data_name} set')
 
-    predictions = model.predict_proba(x_test)[:, 1]  # gives prediction for each class, so for binary just select [1]
-    predicted_labels = model.predict(x_test)
+    predictions = model.predict_proba(x_data)[:, 1]  # gives prediction for each class, so for binary just select [1]
+    predicted_labels = model.predict(x_data)
 
-    plot_roc_curve(model, x_test, y_test)
-    plt.show()
+    f1 = f1_score(y_data.values, predicted_labels)
+    accuracy = accuracy_score(y_data.values, predicted_labels)
+    print(f'on the {data_name} set the models accuracy was {accuracy} and the F1 score was {f1}')
+    fpr, tpr, thresholds = roc_curve(y_data, predictions)  # useful if you want to store values from graph
 
-    plot_precision_recall_curve(model, x_test, y_test)
-    plt.show()
+    if make_plots:
+        plot_roc_curve(model, x_data, y_data)
+        plt.title(data_name)
+        plt.show()
 
-    f1 = f1_score(y_test.values, predicted_labels)
-    accuracy = accuracy_score(y_test.values, predicted_labels)
-    print(f'on the test set the models accuracy was {accuracy} and the F1 score was {f1}')
-    fpr, tpr, thresholds = roc_curve(y_test, predictions)  # useful if you want to store values from graph
+        plot_precision_recall_curve(model, x_data, y_data)
+        plt.title(data_name)
+        plt.show()
     return predictions, predicted_labels
 
 
@@ -120,10 +127,26 @@ def main():
     x_train_data, y_train_data = data_processing(train_df, drop_na=False)
     x_test_data, y_test_data = data_processing(test_df, drop_na=False)
 
-    random_forest, training_predictions, training_probabilities = train_random_forest(x_train_data, y_train_data)
-    test_predictions, test_predicted_labels = test_model(random_forest, x_test_data, y_test_data)
+    # Either use AdaBoostClassifier or RandomForestClassifier as the classifer input below
+    my_model, training_predictions, training_probabilities = train_RF_AdaBoost(x_train_data, y_train_data, RandomForestClassifier)
 
-    return y_test_data
+    # print model hyper parameters and settings
+    print(my_model.get_params())
+
+    # test performance on the training set
+    test_predictions, test_predicted_labels = test_model(my_model, x_train_data, y_train_data, True, 'training data')
+
+    # test performance on the test set
+    test_predictions, test_predicted_labels = test_model(my_model, x_test_data, y_test_data, True, 'test data')
+
+    # Check the feature importances
+    f_import = my_model.feature_importances_
+    feature_names = x_train_data.columns
+
+    plt.bar(x=feature_names, height=f_import)
+    plt.title('Feature Importances')
+    plt.show()
+    return
 
 
 if __name__ == '__main__':
