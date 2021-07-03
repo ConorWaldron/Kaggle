@@ -1,4 +1,4 @@
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
 from sklearn.metrics import roc_curve, plot_roc_curve, plot_precision_recall_curve, f1_score, accuracy_score
 from sklearn.impute import SimpleImputer
 import pandas as pd
@@ -87,9 +87,10 @@ def test_merge(feature_file, answer_file):
     return df
 
 
-def train_random_forest(x_train, y_train):
-    """ Trains a Random Forest, returns train predictions and probabilities """
-    model = RandomForestClassifier(n_estimators=100)  # using default values which give 100 fully grown, unpruned trees
+def train_RF_AdaBoost(x_train, y_train, classifier):
+    """ Trains a Random Forest or AdaBoost Classifier, returns train predictions and probabilities
+    classifier needs to be either sklearn objects RandomForestClassifier or AdaBoostClassifier"""
+    model = classifier()  # using default values
     model.fit(x_train, y_train)
     training_predictions = model.predict(x_train)  # returns vectors of 1s and 0s
     training_probabilities = model.predict_proba(x_train)  # returns floats of probablilities
@@ -126,26 +127,27 @@ def main():
     x_train_data, y_train_data = data_processing(train_df, drop_na=False)
     x_test_data, y_test_data = data_processing(test_df, drop_na=False)
 
-    random_forest, training_predictions, training_probabilities = train_random_forest(x_train_data, y_train_data)
+    # Either use AdaBoostClassifier or RandomForestClassifier as the classifer input below
+    my_model, training_predictions, training_probabilities = train_RF_AdaBoost(x_train_data, y_train_data, RandomForestClassifier)
 
     # print model hyper parameters and settings
-    print(random_forest.get_params())
+    print(my_model.get_params())
 
     # test performance on the training set
-    test_predictions, test_predicted_labels = test_model(random_forest, x_train_data, y_train_data, True, 'training data')
+    test_predictions, test_predicted_labels = test_model(my_model, x_train_data, y_train_data, True, 'training data')
 
     # test performance on the test set
-    test_predictions, test_predicted_labels = test_model(random_forest, x_test_data, y_test_data, True, 'test data')
+    test_predictions, test_predicted_labels = test_model(my_model, x_test_data, y_test_data, True, 'test data')
 
     # Check the feature importances
-    f_import = random_forest.feature_importances_
+    f_import = my_model.feature_importances_
     feature_names = x_train_data.columns
 
     plt.bar(x=feature_names, height=f_import)
     plt.title('Feature Importances')
     plt.show()
-    return random_forest
+    return
 
 
 if __name__ == '__main__':
-    my_model = main()
+    main()
