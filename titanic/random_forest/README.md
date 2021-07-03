@@ -1,6 +1,6 @@
 # Decision Trees & Random Forests
 
-Random Forests consisting of Decision Trees can be used for both classification and regression problems, and for data clustering/visualisation and they can handle data types that are Boolean, categorical or continuous, they can also be used if there is missing data in either the training or test sets. Decision trees aim to learn simple decision rules inferred from training data. 
+Random Forests consisting of Decision Trees can be used for both classification and regression problems, and for data clustering/visualisation and they can handle data types that are Boolean, categorical or continuous, they can also be used if there is missing data in either the training or test sets. Decision trees aim to learn simple decision rules inferred from training data. Random forests are one of the best performing 'out of the box models' and they do not require data mean scaling/normalisation. 
 
 Terminology
 
